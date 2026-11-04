@@ -6,10 +6,6 @@
 
 declare module "sst" {
   export interface Resource {
-    "WebsiteChecker": {
-      "type": "sst.aws.Nextjs"
-      "url": string
-    }
   }
 }
 

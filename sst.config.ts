@@ -14,6 +14,10 @@ export default $config({
         };
     },
     async run() {
+        if ($app.stage === "ci") {
+            const { ciOidc } = await import("./infra/ci-oidc");
+            return ciOidc();
+        }
         const { checker } = await import("./infra/checker");
         return checker();
     },

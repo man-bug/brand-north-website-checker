@@ -44,6 +44,8 @@ pnpm deploy --stage prod
 
 `pnpm remove --stage prod` tears everything down.
 
+Pushes to main deploy automatically through GitHub Actions; pull requests get lint, typecheck, and tests. The auth model and IAM scoping are documented in `docs/ci.md`.
+
 ## Architecture
 
 A scan flows through:
