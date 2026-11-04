@@ -1,0 +1,58 @@
+name: Deploy prod
+
+on:
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: deploy-prod
+    cancel-in-progress: false
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  # The default GITHUB_TOKEN stays useful only for checkout; keep it out of git config where executed code could read it.
+                  persist-credentials: false
+
+            - name: Setup node
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+
+            - name: Enable pnpm via corepack
+              run: corepack enable
+
+            - name: Get pnpm store path
+              id: pnpm-store
+              run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+            - name: Cache pnpm store
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ${{ steps.pnpm-store.outputs.path }}
+                  key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: pnpm-store-${{ runner.os }}-
+
+            - name: Install
+              run: pnpm install --frozen-lockfile
+
+            - name: Configure AWS via OIDC
+              uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+              with:
+                  role-to-assume: arn:aws:iam::022499005161:role/github-website-checker-deploy
+                  aws-region: us-east-1
+
+            - name: Deploy
+              # --print-logs keeps .sst/log/sst.log visible on failure; it
+              # records operation metadata, never secret values.
+              run: pnpm exec sst deploy --stage prod --print-logs
